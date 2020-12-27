@@ -5,7 +5,10 @@
     <el-button type="primary" @click="clearMarker()">删除标记点</el-button>
     <el-button type="primary" @click="updateMarker()">更改标记点</el-button>
     <el-button type="primary" @click="updateContent()">更新标记点内容</el-button>
-    <el-button type="primary" @click="playcustomLine()">画线</el-button>
+    <el-button type="primary" @click="playcustomLine()">将点连线线</el-button>
+    <el-button type="primary" @click="drawPolyline()">绘制折线</el-button>
+    <el-button type="primary" @click="editPolyline()">开始编辑折线</el-button>
+    <el-button type="primary" @click="finishPolyline()">结束编辑折线</el-button>
     <!-- 查看电池历史轨迹 -->
       <div id="map-container" style="width:100%; height:500px"></div>
   </div>
@@ -64,11 +67,15 @@ export default {
           "//a.amap.com/jsapi_demos/static/demo-center/icons/dir-marker.png",
         imageSize: new AMap.Size(135, 40),
         imageOffset: new AMap.Pixel(-95, -3)
-      })
+      }),
+      infoWindow: null,
+      curPolyline: null,
+      polyEditor: null
     };
   },
   mounted() {
     this.seeBatteryHistory()
+    
   },
   methods: {
     //点击查看历史轨迹
@@ -108,7 +115,10 @@ export default {
         var type = ev.type;
         console.log('mapClick', target, lnglat, pixel, type)
       });
-      // setTimeout(function() {
+      that.infoWindow = new AMap.InfoWindow({offset: new AMap.Pixel(0, -30)});
+      
+     
+     // setTimeout(function() {
       //   that.$message({
       //     title: "提醒",
       //     message: "请选择时间范围！",
@@ -290,7 +300,7 @@ export default {
     //     '   <div class="close-btn" onclick="this.clearMarker()">X</div>' +
     //     '</div>';
 
-      markers.forEach((mark) => {
+      markers.forEach((mark, index) => {
         let markval = new AMap.Marker({
           map: that.map,
           //小车出初始位置
@@ -300,11 +310,14 @@ export default {
           // content: markerContent,
           offset: new AMap.Pixel(-26, -13),
         })
-        markval.setLabel({
-        offset: new AMap.Pixel(20, 20),  //设置文本标注偏移量
-        content: `<div class='info'>${mark.title}</div>`, //设置文本标注内容
-        direction: 'right' //设置文本标注方位
-        });
+          markval.content = '我是第' + (index + 1) + '个Marker黄金时刻感受看过';
+          markval.on('click', that.markerClick);
+          // markval.emit('click', {target: markval});
+        // markval.setLabel({
+        // offset: new AMap.Pixel(20, 20),  //设置文本标注偏移量
+        // content: `<div class='info'>${mark.title}</div>`, //设置文本标注内容
+        // direction: 'right' //设置文本标注方位
+        // });
       });
       // markers.forEach((text) => {
       //   let value = new AMap.Text({
@@ -330,25 +343,25 @@ export default {
       //   console.log('text--', value)
       // });
       // that.marker.setMap(that.map);
-    new AMap.Text({
-        text: markers[0].title,
-        anchor:'center', // 设置文本标记锚点
-        map: that.map,
-        cursor:'pointer',
-        style:{
-            'padding': '.75rem 1.25rem',
-            'margin-bottom': '1rem',
-            'border-radius': '.25rem',
-            'background-color': 'white',
-            // 'width': '15rem',
-            'border-width': 0,
-            'box-shadow': '0 2px 6px 0 rgba(114, 124, 245, .5)',
-            'text-align': 'center',
-            'font-size': '20px',
-            'color': 'blue'
-        },
-        position: that.marks[0]
-    });
+    // new AMap.Text({
+    //     text: markers[0].title,
+    //     anchor:'center', // 设置文本标记锚点
+    //     map: that.map,
+    //     cursor:'pointer',
+    //     style:{
+    //         'padding': '.75rem 1.25rem',
+    //         'margin-bottom': '1rem',
+    //         'border-radius': '.25rem',
+    //         'background-color': 'white',
+    //         // 'width': '15rem',
+    //         'border-width': 0,
+    //         'box-shadow': '0 2px 6px 0 rgba(114, 124, 245, .5)',
+    //         'text-align': 'center',
+    //         'font-size': '20px',
+    //         'color': 'blue'
+    //     },
+    //     position: that.marks[0]
+    // });
 
     // text.setMap(that.map);
     },
@@ -364,8 +377,82 @@ export default {
     // 更新标记点内容
     updateContent() {
 
-    }
+    },
+    markerClick(e) {
+      let that = this
+      that.infoWindow.setContent(e.target.content);
+      that.infoWindow.open(that.map, e.target.getPosition());
+    },
+    // 绘制折线
+    drawPolyline() {
+      let mouseTool = new AMap.MouseTool(this.map)
+      this.curPolyline = mouseTool.polyline({
+        strokeColor: "#3366FF", 
+        strokeOpacity: 1,
+        strokeWeight: 6,
+        // 线样式还支持 'dashed'
+        strokeStyle: "solid",
+        // strokeStyle是dashed时有效
+        // strokeDasharray: [10, 5],
+      })
+     
+    },
+    // 开始编辑折线
+    editPolyline() {
+      console.log('this.polyEditor')
+      let that = this
+      var path = [
+        [116.362209, 39.887487],
+        [116.422897, 39.878002],
+        [116.372105, 39.90651],
+        [116.428945, 39.89663]
+    ];
 
+    that.curPolyline = new AMap.Polyline({
+        path: path,
+        isOutline: true,
+        outlineColor: '#ffeeff',
+        borderWeight: 3,
+        strokeColor: "#3366FF", 
+        strokeOpacity: 1,
+        strokeWeight: 6,
+        // 折线样式还支持 'dashed'
+        strokeStyle: "solid",
+        // strokeStyle是dashed时有效
+        strokeDasharray: [10, 5],
+        lineJoin: 'round',
+        lineCap: 'round',
+        zIndex: 50,
+    })
+
+    that.curPolyline.setMap(that.map)
+    // 缩放地图到合适的视野级别
+    that.map.setFitView([ that.curPolyline ])
+      
+       that.polyEditor = new AMap.PolyEditor(that.map, that.curPolyline)
+      console.log('that', that.polyEditor)
+    that.polyEditor.on('addnode', function(event) {
+      console.log('触发事件：addnode', event)
+    })
+
+    that.polyEditor.on('adjust', function(event) {
+      console.log('触发事件：adjust', event)
+    })
+
+    that.polyEditor.on('removenode', function(event) {
+      console.log('触发事件：removenode', event)
+    })
+
+    that.polyEditor.on('end', function(event) {
+      console.log('触发事件： end', event)
+        // event.target 即为编辑后的折线对象
+    })
+      this.polyEditor.open()
+    },
+    // 结束编辑折线
+    finishPolyline() {
+      this.polyEditor.close()
+    },
   },
   // 销毁地图
   beforeDestroy() {
